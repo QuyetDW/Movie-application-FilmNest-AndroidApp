@@ -26,6 +26,8 @@ import com.bumptech.glide.load.resource.bitmap.GranularRoundedCorners;
 import com.bumptech.glide.request.RequestOptions;
 import com.example.filmnest.Adapters.CastListAdapter;
 import com.example.filmnest.Adapters.CategoryEachFlimAdapter;
+import com.example.filmnest.Adapters.CommentAdapter;
+import com.example.filmnest.Domains.Comment;
 import com.example.filmnest.Domains.Film;
 import com.example.filmnest.R;
 import com.example.filmnest.databinding.ActivityDetailBinding;
@@ -40,12 +42,20 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import eightbitlab.com.blurview.RenderEffectBlur;
 import eightbitlab.com.blurview.RenderScriptBlur;
 
 public class DetailActivity extends AppCompatActivity {
 
     private ActivityDetailBinding binding;
+    private FirebaseDatabase database;
+    private DatabaseReference commentsRef;
+    private List<Comment> commentList;
+    private CommentAdapter commentAdapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,9 +71,32 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void setVariable() {
+        database = FirebaseDatabase.getInstance();
         Film item = (Film) getIntent().getSerializableExtra("object");
+        commentsRef = database.getReference("Comments").child(String.valueOf(item.getId()));
         RequestOptions requestOptions = new RequestOptions();
         requestOptions = requestOptions.transform(new CenterCrop(), new GranularRoundedCorners(0,0,50,50));
+
+
+        // Thiết lập RecyclerView cho bình luận
+        commentList = new ArrayList<>();
+        commentAdapter = new CommentAdapter(commentList);
+        binding.commentsRecyclerView.setAdapter(commentAdapter);
+        binding.commentsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        // Lấy dữ liệu bình luận từ Firebase
+        loadComments();
+
+        // Xử lý khi người dùng gửi bình luận
+        binding.submitCommentBtn.setOnClickListener(v -> {
+            String commentText = binding.commentInput.getText().toString();
+            float ratingValue = binding.ratingBar.getRating();
+            if (!commentText.isEmpty() && ratingValue > 0) {
+                submitComment(commentText, ratingValue);
+            } else {
+                Toast.makeText(DetailActivity.this, "Vui lòng nhập bình luận và đánh giá!", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         Glide.with(this)
                 .load(item.getPoster())
@@ -142,6 +175,44 @@ public class DetailActivity extends AppCompatActivity {
         binding.blurView.setOutlineProvider(ViewOutlineProvider.BACKGROUND);
         binding.blurView.setClipToOutline(true);
     }
+
+    private void loadComments() {
+        commentsRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                commentList.clear();
+                for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    Comment comment = dataSnapshot.getValue(Comment.class);
+                    commentList.add(comment);
+                }
+                commentAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(DetailActivity.this, "Lỗi tải bình luận!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void submitComment(String content, float rating) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            String userName = user.getDisplayName();
+            Comment comment = new Comment(userName, content, rating);
+
+            commentsRef.push().setValue(comment).addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Toast.makeText(DetailActivity.this, "Bình luận đã được gửi!", Toast.LENGTH_SHORT).show();
+                    binding.commentInput.setText("");
+                    binding.ratingBar.setRating(0);
+                } else {
+                    Toast.makeText(DetailActivity.this, "Lỗi gửi bình luận!", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
     private void addToBookMark(Film item) {
         // Lấy userID từ Firebase Authentication
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();

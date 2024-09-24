@@ -1,0 +1,43 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@drawable/comment_item_bg"
+    android:layout_marginStart="15sp"
+    android:layout_marginEnd="15sp"
+    android:layout_marginTop="8sp"
+    android:layout_marginBottom="8dp">
+
+
+    <TextView
+        android:id="@+id/userName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tên người dùng"
+        android:textColor="@color/red"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/commentContent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bình luận"
+        android:layout_marginTop="4dp"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:textColor="@color/black" />
+
+    <RatingBar
+        android:id="@+id/commentRatingBar"
+        android:layout_width="wrap_content"
+        android:layout_height="44dp"
+        android:layout_gravity="center"
+        android:numStars="5"
+        android:scaleX="0.5"
+        android:scaleY="0.5"
+        android:stepSize="0.5" />
+
+
+</LinearLayout>
